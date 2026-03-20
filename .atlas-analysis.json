@@ -1,0 +1,76 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "krunvm",
+  "projectDescription": "A CLI utility that creates and manages lightweight microVMs from OCI images using libkrun and buildah.",
+  "theme": "aspen",
+  "primaryColor": "#d30404",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "installation", "quickstart"]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/creating-microvms",
+              "guides/managing-microvms",
+              "guides/volume-mapping",
+              "guides/port-mapping",
+              "guides/configuration"
+            ]
+          },
+          {
+            "group": "Platform Notes",
+            "pages": [
+              "platforms/linux",
+              "platforms/macos"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Command Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/overview",
+              "commands/create",
+              "commands/start",
+              "commands/list",
+              "commands/inspect",
+              "commands/changevm",
+              "commands/delete",
+              "commands/config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Create microVMs directly from OCI container images",
+    "Minimal footprint with fast boot times",
+    "Zero disk image maintenance — uses OCI image as rootfs",
+    "Zero network configuration via Transparent Socket Impersonation (TSI)",
+    "Host volume mapping into the guest microVM",
+    "Guest port exposure to the host",
+    "Cross-platform support: Linux/KVM (x86_64, AArch64) and macOS/Hypervisor.framework (ARM64)",
+    "x86_64 microVM emulation on macOS AArch64 via Rosetta"
+  ],
+  "publicApiSurface": [
+    "krunvm create <image> [--name] [--cpus] [--mem] [--dns] [--workdir] [--volume] [--port]",
+    "krunvm start <name> [command] [args] [--env]",
+    "krunvm list",
+    "krunvm inspect <name>",
+    "krunvm delete <name>",
+    "krunvm changevm <name> [--new-name] [--cpus] [--mem] [--workdir] [--volume] [--port] [--remove-volumes] [--remove-ports]",
+    "krunvm config [--cpus] [--mem] [--dns]"
+  ]
+}
