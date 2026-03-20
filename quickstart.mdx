@@ -66,10 +66,10 @@ description: "Create and start your first krunvm microVM in a few commands."
     This drops you into a Bash shell running inside the microVM. Type `exit` to stop the VM and return to your host shell.
 
     <Tip>
-      You can pass additional arguments to the command after `--`:
+      Pass additional arguments to the command as further positional arguments:
 
       ```bash
-      krunvm start my-fedora /bin/bash -- -c "echo hello from microVM"
+      krunvm start my-fedora /bin/bash -c "echo hello from microVM"
       ```
     </Tip>
   </Step>
@@ -84,8 +84,14 @@ description: "Create and start your first krunvm microVM in a few commands."
     Example output:
 
     ```
-    NAME          CPUS    RAM (MiB)   SOURCE IMAGE
-    my-fedora     2       1024        quay.io/fedora/fedora:latest
+    my-fedora
+     CPUs: 2
+     RAM (MiB): 1024
+     DNS server: 1.1.1.1
+     Buildah container: fedora-working-container
+     Workdir: 
+     Mapped volumes: {}
+     Mapped ports: {}
     ```
   </Step>
 

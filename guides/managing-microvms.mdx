@@ -119,7 +119,7 @@ krunvm changevm fedora-dev --remove-ports
 ## Starting a microVM
 
 ```bash
-krunvm start <name> [COMMAND] [-- ARGS]
+krunvm start <name> [COMMAND [ARGS...]]
 ```
 
 krunvm mounts the buildah container rootfs, passes it to libkrun, and boots the microVM. Your terminal attaches to the virtio-console inside the guest. When the microVM exits, the container is unmounted.
@@ -133,7 +133,7 @@ krunvm start fedora-dev /bin/bash
 To pass arguments to the command:
 
 ```bash
-krunvm start fedora-dev /bin/bash -- -c "echo hello"
+krunvm start fedora-dev /bin/bash -c "echo hello"
 ```
 
 To set environment variables:
