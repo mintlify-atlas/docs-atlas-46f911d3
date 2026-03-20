@@ -1,0 +1,169 @@
+---
+title: "Managing microVMs"
+description: "List, inspect, modify, and delete krunvm microVMs."
+---
+
+This guide covers the full lifecycle of a krunvm microVM after it has been created.
+
+## Lifecycle overview
+
+```
+create → start → [changevm] → delete
+```
+
+- `krunvm create` — build a microVM configuration from an OCI image
+- `krunvm start` — boot the microVM and attach your terminal to it
+- `krunvm list` — show all registered microVMs
+- `krunvm inspect` — display raw buildah metadata for a microVM
+- `krunvm changevm` — modify the configuration of a stopped microVM
+- `krunvm delete` — remove a microVM and its buildah container
+
+## Listing microVMs
+
+```bash
+krunvm list
+```
+
+For each registered microVM, krunvm prints:
+
+```
+<name>
+ CPUs: <count>
+ RAM (MiB): <amount>
+ DNS server: <ip>
+ Buildah container: <container-id>
+ Workdir: <path>
+ Mapped volumes: {"<host_path>": "<guest_path>", ...}
+ Mapped ports: {"<host_port>": "<guest_port>", ...}
+```
+
+If no microVMs exist, the command prints `No microVMs found`.
+
+## Inspecting a microVM
+
+`krunvm inspect` runs `buildah inspect` on the underlying buildah container and prints the raw JSON output. This includes the full OCI image config — entry point, environment variables, labels, and more.
+
+```bash
+krunvm inspect <name>
+```
+
+Example:
+
+```bash
+krunvm inspect fedora-vm
+```
+
+<Note>
+  `krunvm inspect` shows the OCI image metadata stored by buildah, not the krunvm VM configuration. To see the VM configuration (CPUs, RAM, volumes, ports), use `krunvm list` or `krunvm changevm <name>` without any options.
+</Note>
+
+## Modifying a microVM
+
+Use `krunvm changevm` to update the configuration of a microVM. The VM must not be running when you make changes.
+
+```bash
+krunvm changevm <name> [OPTIONS]
+```
+
+Running `krunvm changevm <name>` with no options displays the current configuration without making any changes.
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `--new-name <NAME>` | Rename the microVM. Fails if a VM with the new name already exists. |
+| `--cpus <NUM>` | Change the number of vCPUs. Maximum is `8`. |
+| `--mem <NUM>` | Change the amount of RAM in MiB. Maximum is `16384`. |
+| `--workdir <GUEST_PATH>` | Change the working directory for the first binary executed in the microVM. |
+| `-v, --volume <HOST_PATH:GUEST_PATH>` | Replace all current volume mappings with the specified mapping(s). Can be specified multiple times. |
+| `--remove-volumes` | Remove all volume mappings. |
+| `--port <HOST_PORT:GUEST_PORT>` | Replace all current port mappings with the specified mapping(s). Can be specified multiple times. |
+| `--remove-ports` | Remove all port mappings. |
+
+<Warning>
+  Passing `--volume` or `--port` replaces the entire set of current mappings — it does not add to them. To remove all mappings at once, use `--remove-volumes` or `--remove-ports`.
+</Warning>
+
+### Examples
+
+Rename a microVM:
+
+```bash
+krunvm changevm fedora-vm --new-name fedora-dev
+```
+
+Increase resources:
+
+```bash
+krunvm changevm fedora-dev --cpus 4 --mem 4096
+```
+
+Set a new working directory:
+
+```bash
+krunvm changevm fedora-dev --workdir /workspace
+```
+
+Replace volume mappings:
+
+```bash
+krunvm changevm fedora-dev --volume /home/user/project:/project
+```
+
+Clear all port mappings:
+
+```bash
+krunvm changevm fedora-dev --remove-ports
+```
+
+## Starting a microVM
+
+```bash
+krunvm start <name> [COMMAND] [-- ARGS]
+```
+
+krunvm mounts the buildah container rootfs, passes it to libkrun, and boots the microVM. Your terminal attaches to the virtio-console inside the guest. When the microVM exits, the container is unmounted.
+
+To override the default entry point:
+
+```bash
+krunvm start fedora-dev /bin/bash
+```
+
+To pass arguments to the command:
+
+```bash
+krunvm start fedora-dev /bin/bash -- -c "echo hello"
+```
+
+To set environment variables:
+
+```bash
+krunvm start fedora-dev --env MY_VAR=value
+```
+
+<Note>
+  krunvm uses a lock file in the rootfs to prevent multiple instances of the same VM from running concurrently. If another instance is already running, the command prints `Couldn't acquire lock file. Is another instance of this VM already running?` and exits.
+</Note>
+
+## Deleting a microVM
+
+```bash
+krunvm delete <name>
+```
+
+This command:
+
+1. Unmounts the buildah container filesystem.
+2. Removes the buildah container (`buildah rm`).
+3. Removes the microVM entry from the krunvm configuration store.
+
+<Warning>
+  Deletion is permanent. The microVM configuration and its buildah container are removed. OCI image layers cached by buildah are not removed and can be reused for new microVMs.
+</Warning>
+
+Example:
+
+```bash
+krunvm delete fedora-dev
+```

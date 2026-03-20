@@ -1,0 +1,126 @@
+---
+title: "Creating microVMs"
+description: "Learn how to create microVMs from OCI images using krunvm create."
+---
+
+The `krunvm create` command builds a new microVM configuration from an OCI image. It uses `buildah` to pull the image, mount the container filesystem, and export the OCI image config into the rootfs as `.krun_config.json`. The resulting microVM is registered in krunvm's configuration store and can be started with `krunvm start`.
+
+## Basic usage
+
+```bash
+krunvm create <IMAGE> [OPTIONS]
+```
+
+`IMAGE` is any image reference accepted by `buildah from`, including `docker://`, `oci:`, and short names resolved against configured registries.
+
+## Default values
+
+When you omit resource flags, krunvm applies its global defaults:
+
+| Setting | Default |
+|---|---|
+| vCPUs | `2` |
+| RAM | `1024` MiB |
+| DNS server | `1.1.1.1` |
+
+You can change these defaults with `krunvm config`. See [Configuration](/guides/configuration).
+
+## Options
+
+| Flag | Description |
+|---|---|
+| `--name <NAME>` | Assign a human-readable name to the microVM. If omitted, krunvm uses the buildah container ID. |
+| `--cpus <NUM>` | Number of vCPUs. |
+| `--mem <NUM>` | Amount of RAM in MiB. Memory is not reserved upfront; it is allocated on demand and returned to the host when possible. |
+| `--dns <IP>` | DNS server IP to write into `/etc/resolv.conf` inside the guest. |
+| `--workdir <GUEST_PATH>` | Working directory for the first binary executed in the microVM. An empty string (`""`) lets libkrun choose. |
+| `-v, --volume <HOST_PATH:GUEST_PATH>` | Mount a host directory inside the guest. Can be specified multiple times. See [Volume mapping](/guides/volume-mapping). |
+| `--port <HOST_PORT:GUEST_PORT>` | Forward a host port to a guest port. Can be specified multiple times. See [Port mapping](/guides/port-mapping). |
+| `-x, --x86` | *(macOS only)* Create an x86\_64 microVM using Rosetta for Linux translation, even on an AArch64 host. Restricted to 1 vCPU. |
+
+## What happens internally
+
+<Steps>
+  <Step title="buildah pulls the image">
+    krunvm runs `buildah from <IMAGE>` to pull the OCI image and create a container. The container ID becomes the microVM's buildah container reference.
+  </Step>
+  <Step title="Container filesystem is mounted">
+    krunvm runs `buildah mount` to expose the container's layered filesystem as a single directory (the rootfs).
+  </Step>
+  <Step title="OCI config is exported">
+    krunvm runs `buildah inspect` on the image and writes the JSON output to `<rootfs>/.krun_config.json`. libkrun reads this file at start time to determine the entry point, environment variables, and other image metadata.
+  </Step>
+  <Step title="resolv.conf is written">
+    krunvm writes `/etc/resolv.conf` in the rootfs with `options use-vc` and the configured DNS server IP.
+  </Step>
+  <Step title="Container is unmounted and configuration is saved">
+    The container filesystem is unmounted. The microVM configuration — name, CPUs, RAM, DNS, container ID, workdir, volumes, and ports — is written to the krunvm config store via the `confy` crate.
+  </Step>
+</Steps>
+
+<Note>
+  krunvm requires `buildah` to be installed and available in your `PATH`. On Linux, all commands must run inside a `buildah unshare` session.
+</Note>
+
+## Examples
+
+<Tabs>
+  <Tab title="Fedora">
+    Create a microVM from the latest Fedora image with a custom name:
+
+    ```bash
+    krunvm create quay.io/fedora/fedora:latest --name fedora-vm
+    ```
+
+    Create one with 4 vCPUs and 2 GiB of RAM:
+
+    ```bash
+    krunvm create quay.io/fedora/fedora:latest --name fedora-vm --cpus 4 --mem 2048
+    ```
+  </Tab>
+  <Tab title="Ubuntu">
+    Create a microVM from Ubuntu 24.04:
+
+    ```bash
+    krunvm create docker.io/library/ubuntu:24.04 --name ubuntu-vm
+    ```
+  </Tab>
+  <Tab title="Alpine">
+    Create a lightweight microVM from Alpine Linux:
+
+    ```bash
+    krunvm create docker.io/library/alpine:latest --name alpine-vm
+    ```
+
+    Alpine is useful for minimal workloads — the image is small and the container overhead is low.
+  </Tab>
+</Tabs>
+
+### Set a working directory
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name fedora-vm --workdir /app
+```
+
+The first binary executed in the microVM will start with `/app` as its current working directory.
+
+### Create with volume and port mappings
+
+```bash
+krunvm create quay.io/fedora/fedora:latest \
+  --name fedora-vm \
+  --volume /home/user/data:/data \
+  --port 8080:80
+```
+
+### macOS: create an x86\_64 microVM
+
+On an AArch64 Mac with Rosetta for Linux configured, you can create an x86\_64 microVM:
+
+```bash
+krunvm create docker.io/library/ubuntu:24.04 --name ubuntu-x86 --x86
+```
+
+<Warning>
+  x86 microVMs on AArch64 hosts are restricted to 1 vCPU. Passing `--cpus` with a value other than 1 is silently overridden.
+</Warning>

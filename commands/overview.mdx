@@ -1,0 +1,56 @@
+---
+title: "Command reference"
+description: "Overview of all krunvm CLI commands and the global verbosity flag."
+---
+
+krunvm is controlled entirely through subcommands. Every subcommand accepts `--help` for usage details.
+
+## Global options
+
+<ParamField query="-v" type="number">
+  Sets the verbosity level from lowest (0) to highest (5). This flag is accepted before any subcommand.
+
+  ```bash
+  krunvm -v 3 start my-vm
+  ```
+
+  <Note>
+    The `-v` flag is declared in the source but not yet implemented. Passing it currently has no effect.
+  </Note>
+</ParamField>
+
+## Commands
+
+| Command | Description |
+|---|---|
+| [`krunvm create`](/commands/create) | Create a new microVM from an OCI image |
+| [`krunvm start`](/commands/start) | Start an existing microVM |
+| [`krunvm list`](/commands/list) | List all existing microVMs |
+| [`krunvm inspect`](/commands/inspect) | Run `buildah inspect` on a microVM's backing container |
+| [`krunvm changevm`](/commands/changevm) | Change the configuration of an existing microVM |
+| [`krunvm delete`](/commands/delete) | Delete an existing microVM |
+| [`krunvm config`](/commands/config) | View or update global default settings |
+
+<CardGroup cols={2}>
+  <Card title="create" icon="plus" href="/commands/create">
+    Create a new microVM from an OCI image
+  </Card>
+  <Card title="start" icon="play" href="/commands/start">
+    Start an existing microVM and attach to its console
+  </Card>
+  <Card title="list" icon="list" href="/commands/list">
+    List all microVMs with their current configuration
+  </Card>
+  <Card title="inspect" icon="magnifying-glass" href="/commands/inspect">
+    Inspect the buildah container backing a microVM
+  </Card>
+  <Card title="changevm" icon="pencil" href="/commands/changevm">
+    Modify vCPUs, RAM, volumes, ports, or name of a microVM
+  </Card>
+  <Card title="delete" icon="trash" href="/commands/delete">
+    Delete a microVM and its backing buildah container
+  </Card>
+  <Card title="config" icon="gear" href="/commands/config">
+    View or update global defaults for new microVMs
+  </Card>
+</CardGroup>

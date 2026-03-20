@@ -1,0 +1,53 @@
+---
+title: "krunvm inspect"
+description: "Run buildah inspect on the container backing a krunvm microVM."
+---
+
+## Synopsis
+
+```bash
+krunvm inspect <name>
+```
+
+## Description
+
+`krunvm inspect` runs `buildah inspect` against the buildah container that backs the named microVM. The output is the raw JSON produced by buildah, which includes the OCI image configuration, environment variables, entrypoint, exposed ports, labels, and other metadata stored in the container.
+
+This command is useful for examining the image configuration that krunvm and libkrun will use when the microVM is started.
+
+## Arguments
+
+<ParamField path="name" type="string" required>
+  Name of the microVM to inspect. Must match a microVM created with `krunvm create`.
+</ParamField>
+
+## Output
+
+The output is the JSON object returned by `buildah inspect` for the microVM's backing container. It includes fields such as:
+
+- `Type` — the buildah container type
+- `FromImage` — the OCI image the container was created from
+- `Config` — the OCI image configuration (entrypoint, environment, working directory, exposed ports, etc.)
+- `Manifest` — the image manifest
+- `Container` — the buildah container name
+- `ContainerID` — the buildah container ID
+
+## Examples
+
+Inspect a microVM named `fedora-vm`:
+
+```bash
+krunvm inspect fedora-vm
+```
+
+Pipe the output to `jq` to extract the entrypoint:
+
+```bash
+krunvm inspect fedora-vm | jq '.OCIv1.config.Entrypoint'
+```
+
+Check the environment variables configured in the image:
+
+```bash
+krunvm inspect fedora-vm | jq '.OCIv1.config.Env'
+```

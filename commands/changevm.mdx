@@ -1,0 +1,122 @@
+---
+title: "krunvm changevm"
+description: "Change the configuration of an existing krunvm microVM."
+---
+
+## Synopsis
+
+```bash
+krunvm changevm <name> [OPTIONS]
+```
+
+## Description
+
+`krunvm changevm` modifies the stored configuration of an existing microVM. Changes take effect the next time the microVM is started with [`krunvm start`](/commands/start).
+
+When run without any options, `changevm` displays the current configuration of the microVM without making any changes.
+
+After applying changes, `changevm` always prints the updated configuration.
+
+## Arguments
+
+<ParamField path="name" type="string" required>
+  Name of the microVM to modify.
+</ParamField>
+
+## Options
+
+<ParamField query="--new-name" type="string">
+  Rename the microVM. The new name must not already be in use by another microVM.
+</ParamField>
+
+<ParamField query="--cpus" type="number">
+  Update the number of vCPUs. Maximum value is **8**.
+
+  ```bash
+  krunvm changevm my-vm --cpus 4
+  ```
+</ParamField>
+
+<ParamField query="--mem" type="number">
+  Update the amount of RAM in MiB. Maximum value is **16384** MiB (16 GiB).
+
+  Memory is not reserved immediately — it is provided on demand by the guest.
+
+  ```bash
+  krunvm changevm my-vm --mem 4096
+  ```
+</ParamField>
+
+<ParamField query="-w, --workdir" type="string">
+  Update the working directory used inside the microVM when it starts.
+</ParamField>
+
+<ParamField query="-v, --volume" type="string">
+  Replace all current volume mappings with the specified `host_path:guest_path` mapping. Repeat the flag to set multiple volumes.
+
+  This option **replaces** the existing volume mappings — it does not append to them.
+
+  See [Volume mapping](/guides/volume-mapping) for format constraints.
+</ParamField>
+
+<ParamField query="--remove-volumes" type="boolean">
+  Remove all volume mappings from the microVM.
+
+  <Note>
+    `--remove-volumes` takes precedence. If both `--remove-volumes` and `--volume` are passed, `--remove-volumes` applies and the `--volume` arguments are silently ignored.
+  </Note>
+</ParamField>
+
+<ParamField query="--port" type="string">
+  Replace all current port mappings with the specified `host_port:guest_port` mapping. Repeat the flag to set multiple ports.
+
+  This option **replaces** the existing port mappings — it does not append to them.
+
+  See [Port mapping](/guides/port-mapping) for details.
+</ParamField>
+
+<ParamField query="--remove-ports" type="boolean">
+  Remove all port mappings from the microVM.
+
+  <Note>
+    `--remove-ports` takes precedence. If both `--remove-ports` and `--port` are passed, `--remove-ports` applies and the `--port` arguments are silently ignored.
+  </Note>
+</ParamField>
+
+## Examples
+
+Display current configuration without making changes:
+
+```bash
+krunvm changevm fedora-vm
+```
+
+Rename a microVM:
+
+```bash
+krunvm changevm fedora-vm --new-name fedora-dev
+```
+
+Update vCPU and RAM:
+
+```bash
+krunvm changevm fedora-vm --cpus 4 --mem 4096
+```
+
+Replace volume mappings:
+
+```bash
+krunvm changevm fedora-vm --volume /home/user/newproject:/project
+```
+
+Remove all volume and port mappings:
+
+```bash
+krunvm changevm fedora-vm --remove-volumes --remove-ports
+```
+
+Change the working directory:
+
+```bash
+krunvm changevm fedora-vm --workdir /app
+```

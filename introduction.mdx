@@ -1,0 +1,76 @@
+---
+title: "Introduction"
+description: "Create and manage lightweight microVMs from OCI images using krunvm"
+---
+
+# krunvm
+
+krunvm is a CLI utility for creating and managing lightweight microVMs from OCI container images. It uses [libkrun](https://github.com/containers/libkrun) as the hypervisor backend and [buildah](https://github.com/containers/buildah) to fetch and mount OCI images as the microVM root filesystem.
+
+Unlike traditional virtual machines, krunvm microVMs boot in milliseconds, require no disk image management, and use the OCI image directly as the root filesystem via a virtio-fs device. Networking is provided by libkrun's Transparent Socket Impersonation (TSI), requiring zero network bridge configuration.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install krunvm on macOS or Linux
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Create your first microVM in minutes
+  </Card>
+  <Card title="Command Reference" icon="terminal" href="/commands/overview">
+    Full reference for all CLI commands
+  </Card>
+  <Card title="Volume Mapping" icon="hard-drive" href="/guides/volume-mapping">
+    Map host directories into your microVM
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="OCI-native" icon="box">
+    Use any OCI image from Docker Hub, Quay, or a local registry as your microVM template — no conversion needed.
+  </Card>
+  <Card title="Fast boot" icon="bolt">
+    microVMs start in milliseconds with minimal overhead compared to traditional VMs.
+  </Card>
+  <Card title="Zero disk maintenance" icon="shield-check">
+    The OCI image is mounted directly as the root filesystem. No disk images to create, resize, or maintain.
+  </Card>
+  <Card title="Zero network config" icon="network-wired">
+    Transparent Socket Impersonation (TSI) provides seamless networking without bridges or explicit configuration.
+  </Card>
+  <Card title="Volume mapping" icon="folder-open">
+    Expose host directories into the guest microVM with simple `host_path:guest_path` syntax.
+  </Card>
+  <Card title="Port forwarding" icon="arrow-right-arrow-left">
+    Expose guest ports to the host using `host_port:guest_port` mappings.
+  </Card>
+</CardGroup>
+
+## Supported platforms
+
+| Platform | Architecture | Backend |
+|---|---|---|
+| Linux | x86\_64 | KVM |
+| Linux | AArch64 | KVM |
+| macOS | ARM64 | Hypervisor.framework |
+
+<Note>
+On macOS, krunvm also supports creating x86\_64 microVMs on AArch64 hosts via Rosetta for Linux (with the `--x86` flag).
+</Note>
+
+## How it works
+
+krunvm uses two core dependencies:
+
+- **[buildah](https://github.com/containers/buildah)** — pulls OCI images and mounts them to a local directory, which becomes the microVM root filesystem
+- **[libkrun](https://github.com/containers/libkrun)** — provides the lightweight hypervisor that boots the microVM using the mounted rootfs via virtio-fs
+
+The workflow is:
+1. `krunvm create <image>` — pulls the OCI image with buildah and stores configuration
+2. `krunvm start <name>` — mounts the container and passes the rootfs to libkrun to boot the microVM
+3. When the VM exits, the container is unmounted automatically
+
+## License
+
+krunvm is licensed under [Apache-2.0](https://github.com/containers/krunvm/blob/main/LICENSE).

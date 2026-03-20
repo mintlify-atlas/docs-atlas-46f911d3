@@ -1,0 +1,105 @@
+---
+title: "Configuration"
+description: "Set global defaults for krunvm microVM resources using krunvm config."
+---
+
+krunvm stores a global configuration that provides default values for every new microVM. You can inspect and update this configuration with `krunvm config`.
+
+## Viewing the current configuration
+
+Run `krunvm config` with no options to print the current global defaults:
+
+```bash
+krunvm config
+```
+
+Example output:
+
+```
+Global configuration:
+Default number of CPUs for newly created VMs: 2
+Default amount of RAM (MiB) for newly created VMs: 1024
+Default DNS server for newly created VMs: 1.1.1.1
+```
+
+## Global settings
+
+| Setting | Flag | Default | Maximum |
+|---|---|---|---|
+| vCPUs | `--cpus` | `2` | `8` |
+| RAM | `--mem` | `1024` MiB | `16384` MiB |
+| DNS server | `--dns` | `1.1.1.1` | — |
+
+### `--cpus`
+
+Sets the default number of vCPUs assigned to each new microVM. Must be between 1 and 8.
+
+```bash
+krunvm config --cpus 4
+```
+
+### `--mem`
+
+Sets the default amount of RAM in MiB for each new microVM. Must be between 1 and 16384.
+
+```bash
+krunvm config --mem 2048
+```
+
+Memory configured for a microVM is not reserved upfront. libkrun allocates pages on demand and returns them to the host when they are no longer needed by the guest.
+
+### `--dns`
+
+Sets the default DNS server IP written to `/etc/resolv.conf` in each new microVM. Accepts any valid IP address.
+
+```bash
+krunvm config --dns 8.8.8.8
+```
+
+## Where configuration is stored
+
+krunvm uses the [`confy`](https://crates.io/crates/confy) crate to load and store its configuration. `confy` places the configuration file in the platform-specific config directory:
+
+| Platform | Location |
+|---|---|
+| Linux | `~/.config/krunvm/krunvm.toml` (follows `XDG_CONFIG_HOME`) |
+| macOS | `~/Library/Application Support/krunvm/krunvm.toml` |
+
+The configuration file stores global defaults as well as the full configuration for every registered microVM.
+
+## Per-VM overrides
+
+Global defaults apply when you create a new microVM without specifying a resource flag. Any flag passed to `krunvm create` overrides the global default for that specific microVM:
+
+```bash
+# Uses global defaults (e.g., 2 CPUs, 1024 MiB RAM)
+krunvm create quay.io/fedora/fedora:latest --name default-vm
+
+# Overrides CPUs and RAM for this VM only
+krunvm create quay.io/fedora/fedora:latest --name big-vm --cpus 8 --mem 8192
+```
+
+Changing the global defaults with `krunvm config` does not affect microVMs that have already been created. Use `krunvm changevm` to update the configuration of an existing microVM.
+
+## Example: adjusting defaults for development workloads
+
+If most of your microVMs need more resources than the defaults, set higher values globally to avoid repeating flags on every `create` command:
+
+```bash
+krunvm config --cpus 4 --mem 4096 --dns 8.8.8.8
+```
+
+Verify the change:
+
+```bash
+krunvm config
+```
+
+```
+Global configuration:
+Default number of CPUs for newly created VMs: 4
+Default amount of RAM (MiB) for newly created VMs: 4096
+Default DNS server for newly created VMs: 8.8.8.8
+```
+
+All subsequent `krunvm create` calls will use these values unless explicitly overridden.

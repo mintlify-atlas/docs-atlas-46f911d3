@@ -1,0 +1,67 @@
+---
+title: "krunvm list"
+description: "List all existing krunvm microVMs and their configuration."
+---
+
+## Synopsis
+
+```bash
+krunvm list
+```
+
+## Description
+
+`krunvm list` prints the configuration of every microVM registered in the krunvm config store. If no microVMs exist, it prints `No microVMs found`.
+
+## Options
+
+<ParamField query="-d" type="boolean">
+  Print debug information.
+
+  <Warning>
+    This flag is declared in the source but marked as TODO — it is not yet implemented and has no effect.
+  </Warning>
+</ParamField>
+
+## Output format
+
+For each microVM, `krunvm list` prints one block in the following format:
+
+```
+<name>
+ CPUs: <n>
+ RAM (MiB): <n>
+ DNS server: <addr>
+ Buildah container: <container-id>
+ Workdir: <path>
+ Mapped volumes: {"<host_path>": "<guest_path>", ...}
+ Mapped ports: {"<host_port>": "<guest_port>", ...}
+```
+
+## Example output
+
+```
+fedora-vm
+ CPUs: 2
+ RAM (MiB): 1024
+ DNS server: 1.1.1.1
+ Buildah container: fedora-working-container
+ Workdir: /project
+ Mapped volumes: {"/home/user/project": "/project"}
+ Mapped ports: {"8080": "80"}
+
+alpine-vm
+ CPUs: 1
+ RAM (MiB): 512
+ DNS server: 1.1.1.1
+ Buildah container: alpine-working-container
+ Workdir: 
+ Mapped volumes: {}
+ Mapped ports: {}
+```
+
+## Example
+
+```bash
+krunvm list
+```

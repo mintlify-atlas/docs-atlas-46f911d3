@@ -1,0 +1,100 @@
+---
+title: "Port mapping"
+description: "Forward ports from a krunvm microVM to the host using port mappings."
+---
+
+Port mapping lets you expose network services running inside a krunvm microVM on a port of the host machine. This allows external processes on the host (or on the local network) to reach services running in the guest.
+
+## Syntax
+
+```
+host_port:guest_port
+```
+
+Both `host_port` and `guest_port` must be valid port numbers in the range `1`–`65535` (valid `u16` values).
+
+## Constraints
+
+| Requirement | Details |
+|---|---|
+| Both ports must be valid integers | Values must parse as `u16`. Non-numeric values or values outside `1`–`65535` are rejected. |
+| Exactly one `:` separator | The format is strictly `host_port:guest_port`. Multiple colons cause a parse error. |
+
+## Using port mapping at create time
+
+Pass `--port` to `krunvm create` to configure port forwarding when the microVM is first created:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name web-vm --port 8080:80
+```
+
+This forwards port `8080` on the host to port `80` in the guest. A web server listening on port `80` inside the microVM is reachable at `http://localhost:8080` on the host.
+
+## Forwarding multiple ports
+
+Repeat the `--port` flag to forward multiple ports:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest \
+  --name web-vm \
+  --port 8080:80 \
+  --port 8443:443
+```
+
+## Updating port mappings with changevm
+
+To replace the current port mappings on an existing microVM, use `krunvm changevm` with `--port`. This replaces all existing mappings:
+
+```bash
+krunvm changevm web-vm --port 9090:80
+```
+
+To configure multiple ports, repeat the flag:
+
+```bash
+krunvm changevm web-vm \
+  --port 8080:80 \
+  --port 2222:22
+```
+
+## Removing all port mappings
+
+Use `--remove-ports` to clear all port mappings from a microVM:
+
+```bash
+krunvm changevm web-vm --remove-ports
+```
+
+<Note>
+  `--remove-ports` and `--port` cannot be combined in a single `changevm` invocation. If both are passed, `--remove-ports` takes effect and the `--port` arguments are ignored.
+</Note>
+
+## Networking model
+
+krunvm port forwarding is handled by libkrun's TSI (Transparent Socket Impersonation) networking layer. TSI intercepts socket calls inside the guest and maps them to connections on the host without requiring a network bridge, TAP device, or elevated privileges. Port mappings are passed to libkrun via `krun_set_port_map` at VM start time.
+
+<Tip>
+  Because TSI does not use a bridge, you do not need root access to forward ports. Port forwarding works in a normal user session on both Linux and macOS.
+</Tip>
+
+## Example workflow
+
+Run a simple HTTP server inside a microVM and access it from the host:
+
+```bash
+# Create the microVM with port forwarding
+krunvm create quay.io/fedora/fedora:latest \
+  --name web-vm \
+  --port 8080:80
+
+# Start the VM and run a Python HTTP server on port 80
+krunvm start web-vm /bin/bash -- -c "python3 -m http.server 80"
+```
+
+While the microVM is running, open a browser or run curl on the host:
+
+```bash
+curl http://localhost:8080
+```
+
+The request reaches the Python server running inside the guest on port `80`.

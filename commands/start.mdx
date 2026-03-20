@@ -1,0 +1,96 @@
+---
+title: "krunvm start"
+description: "Start an existing krunvm microVM and attach to its console."
+---
+
+## Synopsis
+
+```bash
+krunvm start <name> [COMMAND [ARGS...]]
+```
+
+## Description
+
+`krunvm start` boots an existing microVM created with [`krunvm create`](/commands/create). It:
+
+1. Unmounts any stale container mount for the microVM.
+2. Mounts the buildah container as the rootfs.
+3. Acquires an exclusive lock on the rootfs (`.krunvm.lock`) to prevent multiple concurrent instances of the same VM.
+4. Boots the microVM via libkrun, attaching stdin and stdout to the guest's virtio-console.
+5. On exit, unmounts the container automatically.
+
+If `COMMAND` is provided it becomes the first binary executed inside the microVM, overriding the image's default entrypoint. Additional `ARGS` are passed as arguments to that command.
+
+If no `COMMAND` is given, libkrun uses the entrypoint and default command defined in the container image config.
+
+## Arguments
+
+<ParamField path="name" type="string" required>
+  Name of the microVM to start. Must match a microVM created with `krunvm create`.
+</ParamField>
+
+<ParamField path="COMMAND" type="string">
+  Optional command to execute inside the microVM instead of the image's default entrypoint.
+</ParamField>
+
+<ParamField path="ARGS" type="string">
+  Optional arguments to pass to `COMMAND`. Provide them after the command name.
+</ParamField>
+
+## Options
+
+<ParamField query="--env" type="string">
+  Environment variable in `KEY=VALUE` format to inject into the microVM. The variables `HOSTNAME` (set to the VM name) and `HOME=/root` are always injected automatically.
+
+  Repeat the flag to set multiple variables.
+</ParamField>
+
+<ParamField query="--cpus" type="number">
+  Override the number of vCPUs for this run.
+
+  <Warning>
+    This flag is declared in the source but marked as TODO — it is not yet implemented and has no effect.
+  </Warning>
+</ParamField>
+
+<ParamField query="--mem" type="number">
+  Override the amount of RAM in MiB for this run.
+
+  <Warning>
+    This flag is declared in the source but marked as TODO — it is not yet implemented and has no effect.
+  </Warning>
+</ParamField>
+
+## Lock file behavior
+
+Before booting, `krunvm start` creates `.krunvm.lock` inside the container rootfs and acquires an exclusive non-blocking `flock`. If the lock is already held — meaning another instance of the same VM is running — the command exits immediately with:
+
+```
+Couldn't acquire lock file. Is another instance of this VM already running?
+```
+
+## Examples
+
+Start a microVM using its image's default entrypoint:
+
+```bash
+krunvm start fedora-vm
+```
+
+Start a microVM with an interactive shell:
+
+```bash
+krunvm start fedora-vm /bin/bash
+```
+
+Run a single command and exit:
+
+```bash
+krunvm start fedora-vm /usr/bin/python3 script.py
+```
+
+Pass environment variables:
+
+```bash
+krunvm start fedora-vm --env DEBUG=1 --env APP_ENV=production /bin/bash
+```

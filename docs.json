@@ -1,122 +1,74 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "krunvm",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#d30404",
+    "light": "#040404",
+    "dark": "#d30404"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/47dda912-020d-4dd4-9962-16bfc875fe35.png",
+  "logo": {
+    "light": "https://media.brand.dev/1e678bdf-1985-494f-9f1d-8c8cd9a42687.svg",
+    "dark": "https://media.brand.dev/1e678bdf-1985-494f-9f1d-8c8cd9a42687.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/containers/krunvm"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/containers/krunvm"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
+            "pages": ["introduction", "installation", "quickstart"]
+          },
+          {
+            "group": "Guides",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "guides/creating-microvms",
+              "guides/managing-microvms",
+              "guides/volume-mapping",
+              "guides/port-mapping",
+              "guides/configuration"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Platform Notes",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "platforms/linux",
+              "platforms/macos"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Command Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Commands",
             "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "commands/overview",
+              "commands/create",
+              "commands/start",
+              "commands/list",
+              "commands/inspect",
+              "commands/changevm",
+              "commands/delete",
+              "commands/config"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

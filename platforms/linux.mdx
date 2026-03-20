@@ -1,0 +1,113 @@
+---
+title: "Linux"
+description: "Platform-specific requirements and behavior for running krunvm on Linux."
+---
+
+krunvm on Linux uses KVM for hardware virtualization and relies on buildah for OCI image management. This page covers the requirements, constraints, and implementation details specific to Linux.
+
+## Supported architectures
+
+krunvm supports two architectures on Linux:
+
+- **x86_64**
+- **AArch64**
+
+Both use Linux KVM as the hypervisor backend.
+
+## Installation
+
+Pre-built packages are available for Fedora through the COPR build system.
+
+<Steps>
+  <Step title="Enable the required COPR repositories">
+    ```bash
+    dnf copr enable -y slp/libkrunfw
+    dnf copr enable -y slp/libkrun
+    dnf copr enable -y slp/krunvm
+    ```
+  </Step>
+  <Step title="Install krunvm">
+    ```bash
+    dnf install -y krunvm
+    ```
+  </Step>
+</Steps>
+
+## Dependencies
+
+| Dependency | Purpose |
+|---|---|
+| [libkrun](https://github.com/containers/libkrun) | Lightweight hypervisor library used as the VM backend |
+| [buildah](https://github.com/containers/buildah) | Pulls and mounts OCI images for use as microVM rootfs |
+
+## KVM requirement
+
+krunvm uses Linux KVM to run microVMs. Your system must have `/dev/kvm` available and your user must have permission to access it.
+
+<Warning>
+  If `/dev/kvm` does not exist or your user lacks access, krunvm will fail when attempting to start a VM. Check that the `kvm` kernel module is loaded and that your user is in the `kvm` group.
+</Warning>
+
+To verify KVM is accessible:
+
+```bash
+ls -l /dev/kvm
+```
+
+To add your user to the `kvm` group:
+
+```bash
+sudo usermod -aG kvm $USER
+```
+
+Log out and back in for the group change to take effect.
+
+## buildah unshare requirement
+
+On Linux, krunvm checks whether it is running as root or inside a `buildah unshare` session at startup. The check inspects two conditions:
+
+- Whether `getuid()` returns `0` (running as root)
+- Whether the `BUILDAH_ISOLATION` environment variable is set (inside a `buildah unshare` session)
+
+If neither condition is true, krunvm exits immediately with:
+
+```
+Please re-run krunvm inside a "buildah unshare" session
+```
+
+This is required because buildah needs user namespace privileges to mount OCI image layers without root access.
+
+### Entering a buildah unshare session
+
+The recommended approach is to prefix your `krunvm` invocation with `buildah unshare`:
+
+```bash
+buildah unshare krunvm create quay.io/fedora/fedora:latest --name my-vm
+```
+
+Alternatively, you can enter an interactive `buildah unshare` shell and run multiple `krunvm` commands within it:
+
+```bash
+buildah unshare
+```
+
+Once inside the session, all subsequent `krunvm` commands work without the prefix:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name my-vm
+krunvm start my-vm
+```
+
+<Note>
+  Running as root also satisfies the check. However, using `buildah unshare` as a non-root user is the recommended approach.
+</Note>
+
+## Volume mapping
+
+On Linux, krunvm maps host volumes into the guest using bind mounts. Before the VM starts, krunvm calls `mount(2)` with the `MS_BIND | MS_REC` flags to bind each host path into the corresponding location inside the container rootfs.
+
+The guest accesses the directory directly through this bind-mounted path — no additional setup is required inside the VM.
+
+<Tip>
+  Guest paths must be direct root children (for example, `/data`). Nested paths like `/data/subdir` are not supported. See the [volume mapping guide](/guides/volume-mapping) for full constraints.
+</Tip>

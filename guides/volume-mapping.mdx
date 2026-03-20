@@ -1,0 +1,108 @@
+---
+title: "Volume mapping"
+description: "Expose host directories inside a krunvm microVM using volume mappings."
+---
+
+Volume mapping lets you share a directory from the host filesystem with the guest running inside a krunvm microVM. Changes made inside the guest to the mounted directory are reflected on the host, and vice versa.
+
+## Syntax
+
+```
+host_path:guest_path
+```
+
+Both `host_path` and `guest_path` are required and must satisfy specific constraints enforced at parse time.
+
+## Constraints
+
+krunvm validates each volume mapping when you pass `--volume`. The following rules apply:
+
+| Requirement | Details |
+|---|---|
+| `host_path` must be absolute | The path must start with `/`. Relative paths are rejected. |
+| `host_path` must exist | The directory must already exist on the host. krunvm does not create it. |
+| `guest_path` must be absolute | The path must start with `/`. |
+| `guest_path` must be a direct root child | The path must have exactly two components: the root `/` and a single directory name. For example, `/data` is valid, but `/data/subdir` is not. |
+
+<Warning>
+  Guest paths like `/data/subdir` are rejected at startup with the error: `Invalid volume, only single direct root children are supported as guest_path`. Use a single top-level directory name such as `/data`.
+</Warning>
+
+## Using volumes at create time
+
+Pass `--volume` to `krunvm create` to configure volume mappings when the microVM is first created:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name fedora-vm --volume /home/user/data:/data
+```
+
+You can specify multiple volumes by repeating the flag:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest \
+  --name fedora-vm \
+  --volume /home/user/src:/src \
+  --volume /home/user/data:/data
+```
+
+## Updating volumes with changevm
+
+To replace the current volume mappings on an existing microVM, use `krunvm changevm` with `--volume`. This replaces all existing mappings:
+
+```bash
+krunvm changevm fedora-vm --volume /home/user/project:/project
+```
+
+To configure multiple volumes, repeat the flag:
+
+```bash
+krunvm changevm fedora-vm \
+  --volume /home/user/src:/src \
+  --volume /home/user/data:/data
+```
+
+## Removing all volume mappings
+
+Use `--remove-volumes` to clear all volume mappings from a microVM:
+
+```bash
+krunvm changevm fedora-vm --remove-volumes
+```
+
+<Note>
+  `--remove-volumes` and `--volume` cannot be combined in a single `changevm` invocation. If both are passed, `--remove-volumes` takes effect and the `--volume` arguments are ignored.
+</Note>
+
+## Platform differences
+
+The mechanism used to expose volumes to the guest differs between Linux and macOS.
+
+<Tabs>
+  <Tab title="Linux">
+    On Linux, krunvm uses bind mounts. Before starting the VM, krunvm calls `mount(2)` with `MS_BIND | MS_REC` to bind the host path into the corresponding path inside the container rootfs. The guest accesses the directory through the bind-mounted path.
+  </Tab>
+  <Tab title="macOS">
+    On macOS, krunvm uses virtiofs. Each volume is registered with libkrun via `krun_add_virtiofs`, assigning it a tag (`krunvm0`, `krunvm1`, etc.). A helper shell script is written to the rootfs and executed first inside the guest. This script runs `mount -t virtiofs <tag> <guest_path>` for each volume before handing off to the actual entry point.
+
+    <Note>
+      The virtiofs mount tags are internal implementation details (`krunvm0`, `krunvm1`, ...). You do not need to reference them in your commands.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Example workflow
+
+Share a source code directory with a Fedora development microVM:
+
+```bash
+# Create the microVM with a volume mapping
+krunvm create quay.io/fedora/fedora:latest \
+  --name dev-vm \
+  --volume /home/user/myproject:/myproject \
+  --workdir /myproject
+
+# Start the VM and open a shell
+krunvm start dev-vm /bin/bash
+```
+
+Inside the guest, `/myproject` contains your host files. Any edits made inside the guest appear immediately on the host at `/home/user/myproject`.

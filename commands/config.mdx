@@ -1,0 +1,81 @@
+---
+title: "krunvm config"
+description: "View or update global default settings used when creating new krunvm microVMs."
+---
+
+## Synopsis
+
+```bash
+krunvm config [OPTIONS]
+```
+
+## Description
+
+`krunvm config` manages the global defaults that krunvm applies when creating a new microVM with [`krunvm create`](/commands/create). Any value set here is used as the default for the corresponding `create` flag when that flag is not explicitly provided.
+
+When run without any options, `config` displays the current global settings without making changes.
+
+Settings are persisted by the [`confy`](https://github.com/rust-cli/confy) crate to a platform-appropriate config file:
+
+- **Linux**: `~/.config/krunvm/krunvm.toml`
+- **macOS**: `~/Library/Application Support/rs.krunvm/krunvm.toml`
+
+## Options
+
+<ParamField query="--cpus" type="number">
+  Set the default number of vCPUs for newly created microVMs. Maximum value is **8**.
+
+  Initial default: **2**
+</ParamField>
+
+<ParamField query="--mem" type="number">
+  Set the default amount of RAM in MiB for newly created microVMs. Maximum value is **16384** MiB (16 GiB).
+
+  Initial default: **1024** MiB
+</ParamField>
+
+<ParamField query="--dns" type="string">
+  Set the default DNS server IP address to configure in new microVMs.
+
+  Initial default: **`1.1.1.1`**
+</ParamField>
+
+## Output format
+
+Running `krunvm config` always prints the current global settings:
+
+```
+Global configuration:
+Default number of CPUs for newly created VMs: 2
+Default amount of RAM (MiB) for newly created VMs: 1024
+Default DNS server for newly created VMs: 1.1.1.1
+```
+
+## Examples
+
+View current global settings:
+
+```bash
+krunvm config
+```
+
+Set the default to 4 vCPUs:
+
+```bash
+krunvm config --cpus 4
+```
+
+Set defaults for all three values at once:
+
+```bash
+krunvm config --cpus 4 --mem 2048 --dns 8.8.8.8
+```
+
+After the above command, `krunvm config` prints:
+
+```
+Global configuration:
+Default number of CPUs for newly created VMs: 4
+Default amount of RAM (MiB) for newly created VMs: 2048
+Default DNS server for newly created VMs: 8.8.8.8
+```

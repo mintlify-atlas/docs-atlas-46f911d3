@@ -1,0 +1,133 @@
+---
+title: "Installation"
+description: "Install krunvm on macOS or Linux, or build it from source."
+---
+
+<Tabs>
+  <Tab title="macOS">
+    ## Install via Homebrew
+
+    krunvm is available as a Homebrew formula. This is the recommended installation method on macOS.
+
+    <Steps>
+      <Step title="Tap the krun repository">
+        ```bash
+        brew tap slp/krun
+        ```
+      </Step>
+      <Step title="Install krunvm">
+        ```bash
+        brew install krunvm
+        ```
+
+        Homebrew will install `krunvm` along with its required dependencies, including `libkrun` and `buildah`.
+      </Step>
+      <Step title="Set up a case-sensitive APFS volume">
+        krunvm requires a dedicated case-sensitive APFS volume for storage. If you have not already created one, run the following in a separate terminal window:
+
+        ```bash
+        diskutil apfs addVolume disk3 "Case-Sensitive APFS" krunvm
+        ```
+
+        <Note>
+          APFS volume creation is non-destructive. The new volume shares disk space with your main container volume and does not require a dedicated disk or `sudo` privileges.
+        </Note>
+
+        The first time you run any `krunvm` command, it will detect that no storage volume is configured and prompt you for the mountpoint. Enter the path where the new volume is mounted, for example:
+
+        ```
+        /Volumes/krunvm
+        ```
+
+        krunvm will verify the volume is case-sensitive, store the path in its configuration, and ask you to run the command again.
+      </Step>
+    </Steps>
+
+    <Warning>
+      The default APFS volume on macOS is case-insensitive. krunvm will refuse to run unless the configured storage volume passes the case-sensitivity check.
+    </Warning>
+  </Tab>
+
+  <Tab title="Linux">
+    ## Install on Fedora via COPR
+
+    Pre-built packages are available for Fedora through the COPR build system.
+
+    <Steps>
+      <Step title="Enable the required COPR repositories">
+        ```bash
+        dnf copr enable -y slp/libkrunfw
+        dnf copr enable -y slp/libkrun
+        dnf copr enable -y slp/krunvm
+        ```
+      </Step>
+      <Step title="Install krunvm">
+        ```bash
+        dnf install -y krunvm
+        ```
+      </Step>
+    </Steps>
+
+    <Note>
+      krunvm on Linux requires KVM. Make sure `/dev/kvm` exists and your user has permission to access it before running microVMs.
+    </Note>
+
+    ## Post-install: run inside a buildah unshare session
+
+    On Linux, krunvm must run inside a `buildah unshare` session unless you are running as root. This is required so that buildah can mount OCI images without elevated privileges. If you run `krunvm` outside a `buildah unshare` session, it will exit immediately with the following message:
+
+    ```
+    Please re-run krunvm inside a "buildah unshare" session
+    ```
+
+    To enter a `buildah unshare` session:
+
+    ```bash
+    buildah unshare
+    ```
+
+    Any `krunvm` commands you run inside this shell will work correctly. See the [Quickstart](/quickstart) for a full example.
+  </Tab>
+</Tabs>
+
+## Building from source
+
+If you are not on Fedora, or if you need a custom build, you can compile krunvm from source.
+
+### Prerequisites
+
+Install the following dependencies before building:
+
+| Dependency | Description |
+|---|---|
+| [Rust toolchain](https://rustup.rs) | Required to compile krunvm |
+| [libkrun](https://github.com/containers/libkrun) | Lightweight hypervisor library used as the VM backend |
+| [buildah](https://github.com/containers/buildah) | Used to pull and mount OCI images |
+| [asciidoctor](https://github.com/asciidoctor/asciidoctor) | Used to build the man pages |
+
+### Build steps
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/containers/krunvm.git
+    cd krunvm
+    ```
+  </Step>
+  <Step title="Build the release binary">
+    ```bash
+    cargo build --release
+    ```
+
+    The compiled binary is placed at `target/release/krunvm`.
+  </Step>
+  <Step title="Install the binary (optional)">
+    ```bash
+    sudo cp target/release/krunvm /usr/local/bin/krunvm
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Make sure `libkrun` is installed and its shared library is discoverable by the linker (`LD_LIBRARY_PATH` on Linux, `DYLD_LIBRARY_PATH` on macOS) before running the built binary.
+</Tip>

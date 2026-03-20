@@ -1,0 +1,116 @@
+---
+title: "krunvm create"
+description: "Create a new microVM from an OCI image."
+---
+
+## Synopsis
+
+```bash
+krunvm create <image> [OPTIONS]
+```
+
+## Description
+
+`krunvm create` pulls an OCI image using buildah and registers a new microVM in the krunvm configuration. It does not start the microVM — use [`krunvm start`](/commands/start) for that.
+
+Internally, `create` runs `buildah from` to create a container from the image, mounts the container filesystem, writes a `resolv.conf` with the configured DNS server, exports the container config to `.krun_config.json` in the rootfs, then unmounts. The resulting microVM entry is persisted to the krunvm config store (via `confy`).
+
+On Linux, `krunvm create` must be run inside a `buildah unshare` session (or as root).
+
+## Arguments
+
+<ParamField path="image" type="string" required>
+  OCI image reference to use as the microVM template. Accepts any format supported by `buildah from`, such as:
+
+  - `quay.io/fedora/fedora:latest`
+  - `docker.io/library/alpine:3.19`
+  - `docker://ubuntu:22.04`
+</ParamField>
+
+## Options
+
+<ParamField query="--name" type="string">
+  Name to assign to the microVM. Must be unique across all existing microVMs.
+
+  If omitted, the buildah container ID is used as the name.
+</ParamField>
+
+<ParamField query="--cpus" type="number">
+  Number of vCPUs to allocate to the microVM.
+
+  Defaults to the global default (see [`krunvm config`](/commands/config)), which is **2** unless changed.
+</ParamField>
+
+<ParamField query="--mem" type="number">
+  Amount of RAM in MiB to make available to the microVM.
+
+  Memory is not reserved immediately — it is allocated on demand by the guest and both the guest and libkrun attempt to return unused pages to the host.
+
+  Defaults to the global default (see [`krunvm config`](/commands/config)), which is **1024** MiB unless changed.
+</ParamField>
+
+<ParamField query="--dns" type="string">
+  IP address of the DNS server to configure inside the microVM. Written to `/etc/resolv.conf` in the rootfs at create time.
+
+  Defaults to the global default (see [`krunvm config`](/commands/config)), which is **`1.1.1.1`** unless changed.
+</ParamField>
+
+<ParamField query="-w, --workdir" type="string" default="">
+  Path inside the microVM to use as the working directory for the first process. An empty string tells libkrun to decide the working directory based on the container image config.
+</ParamField>
+
+<ParamField query="-v, --volume" type="string">
+  Volume mapping in `host_path:guest_path` format. Makes `host_path` on the host visible inside the guest at `guest_path`.
+
+  Repeat the flag to map multiple directories. See [Volume mapping](/guides/volume-mapping) for constraints.
+</ParamField>
+
+<ParamField query="--port" type="string">
+  Port mapping in `host_port:guest_port` format. Exposes a port from the guest to the host.
+
+  Repeat the flag to expose multiple ports. See [Port mapping](/guides/port-mapping) for details.
+</ParamField>
+
+<ParamField query="--x86" type="boolean">
+  **(macOS only)** Create an x86\_64 microVM on an AArch64 host using Rosetta for Linux.
+
+  Requires a `.krunvm-rosetta` file in the home directory with the content expected by the Rosetta binary's ioctl. When this flag is set, vCPUs are restricted to 1 regardless of `--cpus`.
+</ParamField>
+
+## Examples
+
+Create a microVM from a Fedora image with a custom name:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name fedora-vm
+```
+
+Create a microVM with 4 vCPUs and 2 GiB RAM:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name fedora-vm --cpus 4 --mem 2048
+```
+
+Create a microVM with volume and port mappings:
+
+```bash
+krunvm create docker.io/library/nginx:latest \
+  --name nginx-vm \
+  --volume /home/user/html:/html \
+  --port 8080:80
+```
+
+Create a microVM with a working directory:
+
+```bash
+krunvm create quay.io/fedora/fedora:latest \
+  --name dev-vm \
+  --volume /home/user/project:/project \
+  --workdir /project
+```
+
+Create an x86\_64 microVM on an Apple Silicon Mac:
+
+```bash
+krunvm create docker.io/library/debian:bookworm --name debian-x86 --x86
+```

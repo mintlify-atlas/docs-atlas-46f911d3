@@ -1,0 +1,46 @@
+---
+title: "krunvm delete"
+description: "Delete an existing krunvm microVM and its backing buildah container."
+---
+
+## Synopsis
+
+```bash
+krunvm delete <name>
+```
+
+## Description
+
+`krunvm delete` removes a microVM from the krunvm configuration and instructs buildah to unmount and delete the backing container. Both the VM configuration entry and the OCI image container are removed.
+
+Specifically, `delete`:
+
+1. Removes the microVM entry from the krunvm config store.
+2. Calls `buildah umount` to unmount the container filesystem (if currently mounted).
+3. Calls `buildah rm` to delete the buildah container.
+4. Persists the updated config.
+
+<Warning>
+  This operation is irreversible. The microVM configuration and its buildah container are permanently deleted. The original OCI image that was used to create the microVM is **not** removed from the local buildah storage — only the container created from it.
+</Warning>
+
+## Arguments
+
+<ParamField path="name" type="string" required>
+  Name of the microVM to delete.
+</ParamField>
+
+## Examples
+
+Delete a microVM named `fedora-vm`:
+
+```bash
+krunvm delete fedora-vm
+```
+
+Verify it has been removed:
+
+```bash
+krunvm delete fedora-vm
+krunvm list
+```

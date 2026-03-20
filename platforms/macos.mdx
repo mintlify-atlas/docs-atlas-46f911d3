@@ -1,0 +1,147 @@
+---
+title: "macOS"
+description: "Platform-specific requirements and behavior for running krunvm on macOS."
+---
+
+krunvm on macOS uses Apple's Hypervisor.framework as the virtualization backend and relies on buildah for OCI image management. This page covers the requirements, constraints, and implementation details specific to macOS.
+
+## Supported architecture
+
+krunvm on macOS supports **ARM64** only. The Hypervisor.framework backend requires Apple Silicon hardware.
+
+<Note>
+  x86_64 microVMs are also possible on ARM64 hardware via Rosetta for Linux. See the [x86_64 microVMs via Rosetta](#x86_64-microvms-via-rosetta) section below.
+</Note>
+
+## Installation
+
+krunvm is available as a Homebrew formula. This is the recommended installation method on macOS.
+
+<Steps>
+  <Step title="Tap the krun repository">
+    ```bash
+    brew tap slp/krun
+    ```
+  </Step>
+  <Step title="Install krunvm">
+    ```bash
+    brew install krunvm
+    ```
+
+    Homebrew installs `krunvm` along with its required dependencies, including `libkrun` and `buildah`.
+  </Step>
+</Steps>
+
+## Case-sensitive APFS volume requirement
+
+krunvm stores OCI image data in a dedicated, case-sensitive APFS volume. The default macOS APFS volume is case-insensitive and will not work.
+
+The first time you run any `krunvm` command without a configured storage volume, krunvm displays the following prompt:
+
+```
+On macOS, krunvm requires a dedicated, case-sensitive volume.
+You can easily create such volume by executing something like
+this on another terminal:
+
+diskutil apfs addVolume disk3 "Case-sensitive APFS" krunvm
+
+NOTE: APFS volume creation is a non-destructive action that
+doesn't require a dedicated disk nor "sudo" privileges. The
+new volume will share the disk space with the main container
+volume.
+
+Please enter the mountpoint for this volume [/Volumes/krunvm]:
+```
+
+krunvm then verifies the volume is case-sensitive, saves the path to its configuration file, and asks you to run the command again.
+
+### Creating the volume
+
+<Steps>
+  <Step title="Create a case-sensitive APFS volume">
+    In a separate terminal, run:
+
+    ```bash
+    diskutil apfs addVolume disk3 "Case-sensitive APFS" krunvm
+    ```
+
+    This creates a new volume named `krunvm` mounted at `/Volumes/krunvm` by default.
+
+    <Note>
+      APFS volume creation is non-destructive. The new volume shares disk space with your main container volume. No dedicated disk and no `sudo` privileges are required.
+    </Note>
+  </Step>
+  <Step title="Run krunvm and enter the mountpoint">
+    Run any `krunvm` command. When prompted, enter the mountpoint of the new volume (press Enter to accept the default):
+
+    ```
+    Please enter the mountpoint for this volume [/Volumes/krunvm]: /Volumes/krunvm
+    ```
+
+    krunvm writes the path to its configuration and exits. Run your original command again to continue.
+  </Step>
+</Steps>
+
+<Warning>
+  krunvm will not run until the volume passes the case-sensitivity check. A volume that fails the check is rejected and you will be prompted to try a different path.
+</Warning>
+
+## x86_64 microVMs via Rosetta
+
+On ARM64 macOS, you can create x86_64 microVMs using Rosetta for Linux by passing the `--x86` flag to `krunvm create`. This flag is only available on macOS.
+
+```bash
+krunvm create quay.io/fedora/fedora:latest --name fedora-x86 --x86
+```
+
+### Prerequisites
+
+The `--x86` flag requires the `~/.krunvm-rosetta` file to exist. This file must contain the data that the `rosetta` binary expects to receive from its specific ioctl. If the file is missing, krunvm exits with:
+
+```
+To use Rosetta for Linux you need to create the file...
+
+/Users/<username>/.krunvm-rosetta
+
+...with the contents that the "rosetta" binary expects to be served from
+its specific ioctl.
+
+For more information, please refer to this post:
+https://threedots.ovh/blog/2022/06/quick-look-at-rosetta-on-linux/
+```
+
+Refer to [this post](https://threedots.ovh/blog/2022/06/quick-look-at-rosetta-on-linux/) for instructions on generating the required file.
+
+### CPU restriction
+
+x86_64 microVMs created with `--x86` are restricted to **1 vCPU**. If you pass `--cpus` with a value other than 1, krunvm will override it:
+
+```
+x86 microVMs on Aarch64 are restricted to 1 CPU
+```
+
+<Note>
+  When `--x86` is used, krunvm also creates a `/.rosetta` directory inside the microVM rootfs to serve as the Rosetta mount point.
+</Note>
+
+## DYLD_LIBRARY_PATH handling
+
+krunvm depends on shared libraries installed by Homebrew (such as `libkrun`). On macOS, `DYLD_LIBRARY_PATH` is stripped from the environment in certain launch contexts, which would prevent krunvm from finding these libraries.
+
+To handle this transparently, krunvm checks for `DYLD_LIBRARY_PATH` at startup. If the variable is not set, krunvm re-executes itself using `execve(2)` with `DYLD_LIBRARY_PATH` set to `$(brew --prefix)/lib`. This process replacement is invisible to the user — the command behaves as if it ran normally from the start.
+
+## Volume mapping
+
+On macOS, krunvm maps host volumes into the guest using virtiofs rather than bind mounts. Each volume is registered with libkrun via `krun_add_virtiofs`, which assigns it an internal tag (`krunvm0`, `krunvm1`, and so on).
+
+Because virtiofs mounts must be performed from inside the guest, krunvm generates a shell script at `/.krunvm-mount.sh` in the rootfs before the VM starts. This script:
+
+1. Runs `mount -t virtiofs <tag> <guest_path>` for each mapped volume.
+2. Changes to the configured working directory (if set).
+3. Executes the original entry point command via `exec "$@"`.
+
+krunvm sets this script as the VM entry point when volumes are present. It is an internal implementation detail — you do not interact with it directly.
+
+<Tip>
+  Guest paths must be direct root children (for example, `/data`). Nested paths like `/data/subdir` are not supported. See the [volume mapping guide](/guides/volume-mapping) for full constraints.
+</Tip>
